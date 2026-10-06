@@ -1,4 +1,4 @@
-package com.example.audioplayer.ui.components
+package com.example.audioplayer.ui.components.templates
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -23,14 +23,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.audioplayer.ui.LocalActions
+import com.example.audioplayer.ui.components.atoms.Icons
+import com.example.audioplayer.ui.components.atoms.Txt
+import com.example.audioplayer.ui.components.molecules.GlassIconButton
 import com.example.audioplayer.ui.theme.IosType
 import com.example.audioplayer.ui.theme.LocalIos
+import com.example.audioplayer.ui.theme.backdrop
+import com.example.audioplayer.ui.theme.edgeFill
 
 /**
  * Kerangka halaman iOS: Large Title yang berubah jadi judul kecil di tengah saat discroll,
@@ -59,7 +63,9 @@ fun Page(
     }
     val barAlpha by animateFloatAsState(if (scrolled) 1f else 0f, tween(180), label = "bar")
 
-    Box(modifier.fillMaxSize().background(background)) {
+    // backdrop: dengan wallpaper, tiap halaman menggambar wallpaper sendiri supaya halaman
+    // yang sedang bergeser saat navigasi tetap menutupi halaman di belakangnya
+    Box(modifier.fillMaxSize().backdrop(frosted = false).background(background)) {
         LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = 190.dp)) {
             item(key = "__header") {
                 if (header != null) header()
@@ -76,13 +82,7 @@ fun Page(
             Modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = barAlpha }
-                .background(
-                    Brush.verticalGradient(
-                        0f to background,
-                        0.6f to background.copy(alpha = 0.92f),
-                        1f to background.copy(alpha = 0f),
-                    )
-                )
+                .edgeFill(background, 0f to 1f, 0.6f to 0.92f, 1f to 0f)
                 .statusBarsPadding()
                 .height(76.dp)
         )

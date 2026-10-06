@@ -18,6 +18,8 @@ data class Song(
     val folder: String,
     val track: Int = 0,
     val dateAdded: Long = 0L,
+    /** Nama file beserta ekstensi, dipakai untuk mencari file lirik .lrc di sebelahnya. */
+    val fileName: String = "",
 ) {
     val displayArtist: String get() = artist.ifBlank { UNKNOWN_ARTIST }
 
@@ -42,6 +44,7 @@ data class Song(
         .put("folder", folder)
         .put("track", track)
         .put("added", dateAdded)
+        .put("file", fileName)
 
     companion object {
         const val UNKNOWN_ARTIST = "Artis Tidak Dikenal"
@@ -59,6 +62,7 @@ data class Song(
             folder = o.optString("folder"),
             track = o.optInt("track"),
             dateAdded = o.optLong("added"),
+            fileName = o.optString("file"),
         )
 
         /** Ambil kembali Song yang disisipkan di extras MediaItem. */

@@ -3,12 +3,15 @@ package com.example.audioplayer.player
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.SharedPreferences
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.annotation.OptIn
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -17,8 +20,13 @@ import androidx.media3.session.SessionResult
 import com.example.audioplayer.MainActivity
 import com.example.audioplayer.data.Song
 import com.example.audioplayer.data.toMediaItem
+import com.example.audioplayer.player.equalizer.AudioEffects
+import com.example.audioplayer.player.equalizer.EqualizerStore
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 
 /**
@@ -26,6 +34,7 @@ import org.json.JSONArray
  * menangani headset, tombol Bluetooth, serta lockscreen lewat MediaSession.
  * Antrean & posisi disimpan supaya bisa dilanjutkan setelah app ditutup.
  */
+@OptIn(UnstableApi::class) // sesi audio, pauseAtEndOfMediaItems, dan perintah sesi kustom
 class PlaybackService : MediaSessionService() {
 
     private var session: MediaSession? = null
@@ -33,6 +42,8 @@ class PlaybackService : MediaSessionService() {
     private lateinit var prefs: SharedPreferences
     private val handler = Handler(Looper.getMainLooper())
     private val sleepRunnable = Runnable { player.pause() }
+    private val scope = MainScope()
+    private var effects: AudioEffects? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -68,6 +79,7 @@ class PlaybackService : MediaSessionService() {
                 }
             }
         })
+        attachEffects()
         restoreQueue()
 
         val openApp = PendingIntent.getActivity(
@@ -91,12 +103,27 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         savePosition()
         handler.removeCallbacks(sleepRunnable)
+        scope.cancel()
+        effects?.release()
         session?.run {
             player.release()
             release()
         }
         session = null
         super.onDestroy()
+    }
+
+    // ---- Equalizer ----
+
+    /** Beri player sesi audio tetap, lalu terapkan equalizer setiap pengaturannya berubah. */
+    private fun attachEffects() {
+        val sessionId = getSystemService(AudioManager::class.java).generateAudioSessionId()
+        player.audioSessionId = sessionId
+        effects = AudioEffects.create(sessionId)
+
+        val store = EqualizerStore.get(this)
+        store.reportSupported(effects != null)
+        effects?.let { fx -> scope.launch { store.settings.collect(fx::apply) } }
     }
 
     // ---- Sleep timer ----

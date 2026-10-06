@@ -7,6 +7,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -34,7 +35,10 @@ data class IosColors(
     val glassSheen: Color,
     val glassEdgeTop: Color,
     val glassEdgeBottom: Color,
-)
+) {
+    /** Warna teks/ikon di atas latar [accent]: hitam untuk aksen terang (mis. kuning), putih selainnya. */
+    val onAccent: Color get() = if (accent.luminance() > 0.45f) Color.Black else Color.White
+}
 
 fun iosColors(dark: Boolean, tinted: Boolean): IosColors =
     if (!dark) IosColors(
@@ -106,6 +110,11 @@ fun AppTheme(settings: AppSettings, content: @Composable () -> Unit) {
         2 -> true
         else -> isSystemInDarkTheme()
     }
-    val colors = remember(dark, settings.glassTinted) { iosColors(dark, settings.glassTinted) }
-    CompositionLocalProvider(LocalIos provides colors, content = content)
+    val wallpaper = rememberWallpaper(settings, dark)
+    val palette = wallpaper?.palette
+    val colors = remember(dark, settings.glassTinted, palette) {
+        val base = iosColors(dark, settings.glassTinted)
+        if (palette != null) wallpaperColors(base, palette, settings.glassTinted) else base
+    }
+    CompositionLocalProvider(LocalIos provides colors, LocalWallpaper provides wallpaper, content = content)
 }

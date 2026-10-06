@@ -29,14 +29,20 @@ import com.example.audioplayer.data.Library
 import com.example.audioplayer.data.LibraryStore
 import com.example.audioplayer.data.Song
 import com.example.audioplayer.data.SongRepository
+import com.example.audioplayer.data.WallpaperFile
+import com.example.audioplayer.data.lyrics.LyricsRepository
 import com.example.audioplayer.data.toMediaItem
 import com.example.audioplayer.player.PlaybackService
+import com.example.audioplayer.player.equalizer.EqualizerStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -60,10 +66,19 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SongRepository(app)
     val store = LibraryStore(app)
+    val equalizer = EqualizerStore.get(app)
+    val lyrics = LyricsRepository(app)
     private var controller: MediaController? = null
 
     private val _library = MutableStateFlow(Library.EMPTY)
     val library: StateFlow<Library> = _library.asStateFlow()
+
+    /** Semua audio hasil scan, sebelum disaring [LibraryFilter]. */
+    private var allSongs: List<Song> = emptyList()
+
+    /** Jumlah audio yang disembunyikan filter (ditampilkan di Pengaturan). */
+    private val _hiddenCount = MutableStateFlow(0)
+    val hiddenCount: StateFlow<Int> = _hiddenCount.asStateFlow()
 
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -148,6 +163,11 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
+        // Pustaka disaring ulang setiap aturan filter diubah, tanpa perlu scan ulang
+        viewModelScope.launch {
+            store.settings.map { it.filter }.distinctUntilChanged().drop(1).collect { rebuildLibrary() }
+        }
+
         reload()
     }
 
@@ -160,12 +180,36 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             _hasPermission.value = granted
             val device = if (granted) repo.loadFromDevice() else emptyList()
             val folders = store.safFolders.value.flatMap { repo.loadFromFolder(Uri.parse(it)) }
-            _library.value = withContext(Dispatchers.Default) {
-                Library((device + folders).sortedBy { it.title.lowercase() })
-            }
+            allSongs = withContext(Dispatchers.Default) { (device + folders).sortedBy { it.title.lowercase() } }
+            rebuildLibrary()
             _loading.value = false
-            syncFromController(rebuildQueue = true)
         }
+    }
+
+    private suspend fun rebuildLibrary() {
+        val filter = store.settings.value.filter
+        val songs = allSongs
+        val visible = withContext(Dispatchers.Default) { songs.filter(filter::accepts) }
+        _library.value = withContext(Dispatchers.Default) { Library(visible) }
+        _hiddenCount.value = songs.size - visible.size
+        syncFromController(rebuildQueue = true)
+    }
+
+    fun setWallpaper(uri: Uri, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val ok = WallpaperFile.import(getApplication(), uri)
+            if (ok) store.updateSettings { it.copy(wallpaper = System.currentTimeMillis()) }
+            onDone(ok)
+        }
+    }
+
+    fun importLyrics(song: Song, uri: Uri, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch { onDone(lyrics.import(song, uri)) }
+    }
+
+    fun clearWallpaper() {
+        store.updateSettings { it.copy(wallpaper = 0L) }
+        WallpaperFile.delete(getApplication())
     }
 
     fun addFolder(uri: Uri) {

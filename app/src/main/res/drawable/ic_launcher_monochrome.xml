@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Versi satu warna untuk themed icon (Android 13+); launcher yang memberi warna. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M37,37.5 L67,31 L67,38.5 L37,45 Z M37,40 L41,40 L41,68 L37,68 Z M63,34 L67,34 L67,62 L63,62 Z M33.2,74.4 C28.6,75.4 25.2,73.4 25.6,70.2 C26,67 30.2,64 34.8,63 C39.4,62 42.6,64 41.2,67.6 C40.6,70.8 37.8,73.4 33.2,74.4 Z M59.2,68.4 C54.6,69.4 51.2,67.4 51.6,64.2 C52,61 56.2,58 60.8,57 C65.4,56 68.6,58 67.2,61.6 C66.6,64.8 63.8,67.4 59.2,68.4 Z M79,37 Q80.2,44.8 88,46 Q80.2,47.2 79,55 Q77.8,47.2 70,46 Q77.8,44.8 79,37 Z M74,24.5 Q74.6,28.4 78.5,29 Q74.6,29.6 74,33.5 Q73.4,29.6 69.5,29 Q73.4,28.4 74,24.5 Z" />
+</vector>

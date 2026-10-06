@@ -1,4 +1,4 @@
-﻿package com.example.audioplayer.ui
+package com.example.audioplayer.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -7,12 +7,13 @@ import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
@@ -31,10 +32,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,10 +40,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -57,50 +51,47 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.audioplayer.data.AUDIO_PERMISSION
-import com.example.audioplayer.ui.components.ActionSheetHost
-import com.example.audioplayer.ui.components.AlertHost
-import com.example.audioplayer.ui.components.AlertSpec
-import com.example.audioplayer.ui.components.Artwork
-import com.example.audioplayer.ui.components.Ico
-import com.example.audioplayer.ui.components.Icons
-import com.example.audioplayer.ui.components.SheetSpec
-import com.example.audioplayer.ui.components.ToastHost
-import com.example.audioplayer.ui.components.Txt
-import com.example.audioplayer.ui.components.bounce
-import com.example.audioplayer.ui.components.glass
-import com.example.audioplayer.ui.components.noRippleClick
-import com.example.audioplayer.ui.screens.AlbumDetailScreen
-import com.example.audioplayer.ui.screens.AlbumsScreen
-import com.example.audioplayer.ui.screens.ArtistDetailScreen
-import com.example.audioplayer.ui.screens.ArtistsScreen
-import com.example.audioplayer.ui.screens.FavoritesScreen
-import com.example.audioplayer.ui.screens.FolderDetailScreen
-import com.example.audioplayer.ui.screens.FoldersScreen
-import com.example.audioplayer.ui.screens.HomeScreen
-import com.example.audioplayer.ui.screens.LibraryScreen
-import com.example.audioplayer.ui.screens.NowPlayingScreen
-import com.example.audioplayer.ui.screens.PlaylistDetailScreen
-import com.example.audioplayer.ui.screens.PlaylistsScreen
-import com.example.audioplayer.ui.screens.RecentScreen
-import com.example.audioplayer.ui.screens.SearchScreen
-import com.example.audioplayer.ui.screens.SettingsScreen
-import com.example.audioplayer.ui.screens.SongsScreen
+import com.example.audioplayer.data.Song
+import com.example.audioplayer.ui.components.organisms.ActionSheetHost
+import com.example.audioplayer.ui.components.organisms.AlertHost
+import com.example.audioplayer.ui.components.organisms.AlertSpec
+import com.example.audioplayer.ui.components.organisms.MiniPlayer
+import com.example.audioplayer.ui.components.organisms.SearchBar
+import com.example.audioplayer.ui.components.organisms.SheetSpec
+import com.example.audioplayer.ui.components.organisms.TabBar
+import com.example.audioplayer.ui.components.organisms.ToastHost
+import com.example.audioplayer.ui.screens.equalizer.EqualizerScreen
+import com.example.audioplayer.ui.screens.home.HomeScreen
+import com.example.audioplayer.ui.screens.library.AlbumDetailScreen
+import com.example.audioplayer.ui.screens.library.AlbumsScreen
+import com.example.audioplayer.ui.screens.library.ArtistDetailScreen
+import com.example.audioplayer.ui.screens.library.ArtistsScreen
+import com.example.audioplayer.ui.screens.library.FavoritesScreen
+import com.example.audioplayer.ui.screens.library.FolderDetailScreen
+import com.example.audioplayer.ui.screens.library.FoldersScreen
+import com.example.audioplayer.ui.screens.library.LibraryScreen
+import com.example.audioplayer.ui.screens.library.RecentScreen
+import com.example.audioplayer.ui.screens.library.SongsScreen
+import com.example.audioplayer.ui.screens.nowplaying.NowPlayingScreen
+import com.example.audioplayer.ui.screens.playlists.PlaylistDetailScreen
+import com.example.audioplayer.ui.screens.playlists.PlaylistsScreen
+import com.example.audioplayer.ui.screens.search.SearchScreen
+import com.example.audioplayer.ui.screens.settings.SettingsScreen
 import com.example.audioplayer.ui.theme.AppTheme
-import com.example.audioplayer.ui.theme.IosType
 import com.example.audioplayer.ui.theme.LocalIos
+import com.example.audioplayer.ui.theme.LocalWallpaper
+import com.example.audioplayer.ui.theme.backdrop
+import com.example.audioplayer.ui.theme.edgeFill
+import kotlinx.coroutines.launch
 
 @Composable
 fun App(vm: PlayerViewModel = viewModel(), nav: NavViewModel = viewModel()) {
@@ -113,11 +104,25 @@ fun App(vm: PlayerViewModel = viewModel(), nav: NavViewModel = viewModel()) {
         var sheet by remember { mutableStateOf<SheetSpec?>(null) }
         var alert by remember { mutableStateOf<AlertSpec?>(null) }
         var toast by remember { mutableStateOf<String?>(null) }
+        var rootSize by remember { mutableStateOf(IntSize.Zero) }
+        val wallpaper = LocalWallpaper.current
+        // Wallpaper dimuat async (bisa setelah layout pertama), jadi ukuran layar diteruskan di sini
+        LaunchedEffect(wallpaper, rootSize) { wallpaper?.rootSize = rootSize }
 
         val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
         val audioPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             vm.reload()
             if (Build.VERSION.SDK_INT >= 33) notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            if (uri != null) vm.setWallpaper(uri) { ok -> if (!ok) toast = "Gambar tidak bisa dibuka" }
+        }
+        var lyricsTarget by remember { mutableStateOf<Song?>(null) }
+        val lyricsPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val song = lyricsTarget
+            if (uri != null && song != null) {
+                vm.importLyrics(song, uri) { ok -> toast = if (ok) "Lirik Ditambahkan" else "Bukan file lirik" }
+            }
         }
         val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) vm.addFolder(uri)
@@ -140,12 +145,26 @@ fun App(vm: PlayerViewModel = viewModel(), nav: NavViewModel = viewModel()) {
                 toast = { toast = it },
                 requestAudioPermission = { audioPermission.launch(AUDIO_PERMISSION) },
                 pickFolder = { folderPicker.launch(null) },
+                pickWallpaper = {
+                    wallpaperPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                pickLyrics = { song ->
+                    lyricsTarget = song
+                    // .lrc tidak punya MIME baku, jadi semua file ditampilkan
+                    lyricsPicker.launch(arrayOf("*/*"))
+                },
             )
         }
 
         CompositionLocalProvider(LocalActions provides actions) {
             val player by vm.player.collectAsState()
-            Box(Modifier.fillMaxSize().background(c.background)) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { rootSize = it }
+                    .backdrop(frosted = false)
+                    .background(c.background)
+            ) {
                 Screens(nav)
 
                 // Fade di tepi bawah supaya bar kaca "melayang" di atas konten
@@ -154,7 +173,7 @@ fun App(vm: PlayerViewModel = viewModel(), nav: NavViewModel = viewModel()) {
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .height(150.dp)
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, c.background.copy(alpha = 0.85f))))
+                        .edgeFill(c.background, 0f to 0f, 1f to 0.85f)
                 )
                 BottomBars(nav, hasCurrent = player.current != null)
 
@@ -178,7 +197,7 @@ fun App(vm: PlayerViewModel = viewModel(), nav: NavViewModel = viewModel()) {
 
 @Composable
 private fun SystemBars(darkIcons: Boolean) {
-    val activity = LocalContext.current as? ComponentActivity ?: return
+    val activity = LocalActivity.current as? ComponentActivity ?: return
     LaunchedEffect(darkIcons) {
         val style = if (darkIcons) SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
         else SystemBarStyle.dark(AndroidColor.TRANSPARENT)
@@ -220,6 +239,7 @@ private fun Screens(nav: NavViewModel) {
                 Route.Favorites -> FavoritesScreen()
                 Route.Recent -> RecentScreen()
                 Route.Settings -> SettingsScreen()
+                Route.Equalizer -> EqualizerScreen()
                 is Route.AlbumDetail -> AlbumDetailScreen(route.key)
                 is Route.ArtistDetail -> ArtistDetailScreen(route.name)
                 is Route.FolderDetail -> FolderDetailScreen(route.path)
@@ -247,93 +267,6 @@ private fun BoxScope.BottomBars(nav: NavViewModel, hasCurrent: Boolean) {
         }
         AnimatedContent(nav.tab == Tab.Search, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "bar") { searching ->
             if (searching) SearchBar(nav) else TabBar(nav)
-        }
-    }
-}
-
-@Composable
-private fun TabBar(nav: NavViewModel) {
-    val c = LocalIos.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.weight(1f).height(62.dp).glass(CircleShape).padding(4.dp)) {
-            listOf(Tab.Home, Tab.Library, Tab.Playlists).forEach { t ->
-                val selected = nav.tab == t
-                val bg by animateColorAsState(if (selected) c.fill else Color.Transparent, tween(200), label = "tab")
-                val fg = if (selected) c.accent else c.label
-                Column(
-                    Modifier.weight(1f).fillMaxHeight().clip(CircleShape).background(bg).noRippleClick { nav.select(t) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Ico(t.icon, fg, size = 24.dp)
-                    Txt(t.label, IosType.caption2, color = fg)
-                }
-            }
-        }
-        Box(Modifier.size(62.dp).glass(CircleShape).bounce { nav.select(Tab.Search) }, Alignment.Center) {
-            Ico(Icons.Search, c.label, size = 26.dp)
-        }
-    }
-}
-
-@Composable
-private fun SearchBar(nav: NavViewModel) {
-    val c = LocalIos.current
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(54.dp).glass(CircleShape).bounce { nav.select(nav.previousTab) }, Alignment.Center) {
-            Ico(nav.previousTab.icon, c.label, size = 24.dp)
-        }
-        Row(
-            Modifier.weight(1f).height(54.dp).glass(CircleShape).padding(start = 16.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Ico(Icons.Search, c.secondaryLabel, size = 20.dp)
-            BasicTextField(
-                value = nav.query,
-                onValueChange = { nav.query = it },
-                singleLine = true,
-                textStyle = IosType.body.copy(color = c.label),
-                cursorBrush = SolidColor(c.accent),
-                modifier = Modifier.weight(1f).padding(start = 8.dp).focusRequester(focus),
-                decorationBox = { inner ->
-                    Box {
-                        if (nav.query.isEmpty()) Txt("Lagu, album, artis", IosType.body, color = c.secondaryLabel)
-                        inner()
-                    }
-                },
-            )
-            if (nav.query.isNotEmpty()) {
-                Box(Modifier.size(36.dp).noRippleClick { nav.query = "" }, Alignment.Center) {
-                    Ico(Icons.CloseCircle, c.tertiaryLabel, size = 20.dp)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MiniPlayer(onOpen: () -> Unit) {
-    val a = LocalActions.current
-    val c = LocalIos.current
-    val p by a.vm.player.collectAsState()
-    val song = p.current ?: return
-    Row(
-        Modifier.fillMaxWidth().height(58.dp).glass(CircleShape).noRippleClick(onOpen).padding(start = 8.dp, end = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Artwork(song, 42.dp, Modifier.size(42.dp), corner = 21.dp)
-        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Txt(song.title, IosType.subhead.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
-            Txt(song.displayArtist, IosType.footnote, color = c.secondaryLabel)
-        }
-        Box(Modifier.size(44.dp).bounce { a.vm.togglePlay() }, Alignment.Center) {
-            Ico(if (p.isPlaying) Icons.Pause else Icons.Play, c.label, size = 26.dp)
-        }
-        Spacer(Modifier.width(2.dp))
-        Box(Modifier.size(44.dp).bounce { a.vm.next() }, Alignment.Center) {
-            Ico(Icons.Next, c.label, size = 26.dp)
         }
     }
 }

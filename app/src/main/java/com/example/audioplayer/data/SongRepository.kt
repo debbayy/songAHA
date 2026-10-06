@@ -52,6 +52,7 @@ class SongRepository(private val context: Context) {
                 val addedCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
                 while (c.moveToNext()) {
                     val id = c.getLong(idCol)
+                    val path = c.getString(dataCol).orEmpty()
                     songs += Song(
                         id = "ms:$id",
                         title = c.getString(titleCol) ?: "Tanpa Judul",
@@ -62,7 +63,8 @@ class SongRepository(private val context: Context) {
                         albumId = c.getLong(albumIdCol),
                         durationMs = c.getLong(durCol),
                         uri = ContentUris.withAppendedId(collection, id),
-                        folder = c.getString(dataCol)?.substringBeforeLast('/', "").orEmpty(),
+                        folder = path.substringBeforeLast('/', ""),
+                        fileName = path.substringAfterLast('/'),
                         track = c.getInt(trackCol),
                         dateAdded = c.getLong(addedCol),
                     )
@@ -115,6 +117,7 @@ class SongRepository(private val context: Context) {
                             uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId),
                             folder = parentDocId,
                             dateAdded = c.getLong(3) / 1000,
+                            fileName = name,
                         )
                     }
                 }

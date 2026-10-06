@@ -16,6 +16,12 @@ data class AppSettings(
     val theme: Int = 0,
     /** false = kaca bening, true = kaca berwarna (lebih pekat) */
     val glassTinted: Boolean = false,
+    /** 0 = tanpa wallpaper; selain itu waktu wallpaper dipasang (sekaligus kunci cache) */
+    val wallpaper: Long = 0L,
+    /** 0 = gambar tajam, 1 = blur penuh */
+    val wallBlur: Float = 0.5f,
+    /** Aturan menyembunyikan audio yang bukan musik */
+    val filter: LibraryFilter = LibraryFilter(),
 )
 
 /**
@@ -39,7 +45,16 @@ class LibraryStore(context: Context) {
     val safFolders: StateFlow<Set<String>> = _safFolders.asStateFlow()
 
     private val _settings = MutableStateFlow(
-        AppSettings(prefs.getInt(KEY_THEME, 0), prefs.getBoolean(KEY_GLASS, false))
+        AppSettings(
+            theme = prefs.getInt(KEY_THEME, 0),
+            glassTinted = prefs.getBoolean(KEY_GLASS, false),
+            wallpaper = prefs.getLong(KEY_WALL, 0L),
+            wallBlur = prefs.getFloat(KEY_WALL_BLUR, 0.5f),
+            filter = LibraryFilter(
+                minDurationSec = prefs.getInt(KEY_MIN_DURATION, 30),
+                hideRecordings = prefs.getBoolean(KEY_HIDE_RECORDINGS, true),
+            ),
+        )
     )
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
 
@@ -106,7 +121,14 @@ class LibraryStore(context: Context) {
     fun updateSettings(transform: (AppSettings) -> AppSettings) {
         val s = transform(_settings.value)
         _settings.value = s
-        prefs.edit().putInt(KEY_THEME, s.theme).putBoolean(KEY_GLASS, s.glassTinted).apply()
+        prefs.edit()
+            .putInt(KEY_THEME, s.theme)
+            .putBoolean(KEY_GLASS, s.glassTinted)
+            .putLong(KEY_WALL, s.wallpaper)
+            .putFloat(KEY_WALL_BLUR, s.wallBlur)
+            .putInt(KEY_MIN_DURATION, s.filter.minDurationSec)
+            .putBoolean(KEY_HIDE_RECORDINGS, s.filter.hideRecordings)
+            .apply()
     }
 
     // ---- Penyimpanan ----
@@ -141,6 +163,10 @@ class LibraryStore(context: Context) {
         const val KEY_SAF = "saf_folders"
         const val KEY_THEME = "theme"
         const val KEY_GLASS = "glass_tinted"
+        const val KEY_WALL = "wallpaper"
+        const val KEY_WALL_BLUR = "wallpaper_blur"
+        const val KEY_MIN_DURATION = "filter_min_duration"
+        const val KEY_HIDE_RECORDINGS = "filter_hide_recordings"
         const val MAX_RECENT = 30
     }
 }

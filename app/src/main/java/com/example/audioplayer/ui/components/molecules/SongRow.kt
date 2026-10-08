@@ -38,10 +38,13 @@ fun SongRow(
     onMore: () -> Unit,
     number: Int? = null,
     separator: Boolean = true,
+    /** false di daftar yang bisa diurutkan: tahan dipakai untuk menggeser, menu lewat tombol "…". */
+    menuOnLongPress: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val c = LocalIos.current
     Row(
-        Modifier.fillMaxWidth().pressable(onLongClick = onMore, onClick = onClick).padding(start = 16.dp),
+        modifier.fillMaxWidth().pressable(onLongClick = onMore.takeIf { menuOnLongPress }, onClick = onClick).padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (number != null) {

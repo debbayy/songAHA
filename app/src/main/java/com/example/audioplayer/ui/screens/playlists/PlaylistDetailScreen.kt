@@ -2,12 +2,11 @@ package com.example.audioplayer.ui.screens.playlists
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -19,10 +18,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.audioplayer.data.Song
 import com.example.audioplayer.ui.LocalActions
 import com.example.audioplayer.ui.components.atoms.Artwork
 import com.example.audioplayer.ui.components.atoms.Icons
 import com.example.audioplayer.ui.components.atoms.Txt
+import com.example.audioplayer.ui.components.foundation.rememberReorderState
+import com.example.audioplayer.ui.components.foundation.reorderable
+import com.example.audioplayer.ui.components.foundation.withStableKeys
 import com.example.audioplayer.ui.components.molecules.EmptyState
 import com.example.audioplayer.ui.components.molecules.GlassIconButton
 import com.example.audioplayer.ui.components.molecules.PlayShuffleButtons
@@ -36,6 +39,9 @@ import com.example.audioplayer.ui.theme.LocalIos
 import com.example.audioplayer.ui.theme.rememberArtTint
 import com.example.audioplayer.ui.util.songCountLabel
 
+/** Lagu di playlist beserta posisinya di songIds (bisa beda dari urutan tampil kalau ada lagu yang sudah terhapus). */
+private data class PlaylistEntry(val position: Int, val song: Song)
+
 @Composable
 fun PlaylistDetailScreen(id: String) {
     val a = LocalActions.current
@@ -48,7 +54,16 @@ fun PlaylistDetailScreen(id: String) {
         Page("Playlist") { item { EmptyState("Playlist Dihapus", "Playlist ini sudah tidak ada.") } }
         return
     }
-    val songs = remember(lib, playlist) { playlist.songIds.mapNotNull { lib.byId[it] } }
+    val entries = remember(lib, playlist) {
+        playlist.songIds
+            .mapIndexedNotNull { pos, songId -> lib.byId[songId]?.let { PlaylistEntry(pos, it) } }
+            .withStableKeys { it.song.id }
+    }
+    val listState = rememberLazyListState()
+    val reorder = rememberReorderState(entries, key = { it.key }, listState) { from, to ->
+        a.vm.store.movePlaylistSong(id, entries[from].value.position, entries[to].value.position)
+    }
+    val songs = reorder.items.map { it.value.song }
     val tint = rememberArtTint(songs.firstOrNull(), c.fill)
 
     fun menu() = a.showSheet(
@@ -79,6 +94,8 @@ fun PlaylistDetailScreen(id: String) {
 
     Page(
         playlist.name,
+        state = listState,
+        listModifier = Modifier.reorderable(reorder),
         actions = { GlassIconButton(Icons.More, { menu() }) },
         header = {
             Column(
@@ -101,16 +118,19 @@ fun PlaylistDetailScreen(id: String) {
         }
         songList(
             songs, player, a,
+            key = { i, _ -> reorder.items[i].key },
+            reorder = reorder,
             extra = { _, i ->
                 listOf(SheetAction("Hapus dari Playlist", Icons.Trash, destructive = true) {
-                    // indeks di songs bisa berbeda dengan songIds kalau ada lagu yang hilang
-                    val target = songs[i].id
-                    var seen = -1
-                    val realIndex = playlist.songIds.indexOfFirst { sid -> if (lib.byId.containsKey(sid)) seen++; sid == target && seen == i }
-                    if (realIndex >= 0) a.vm.store.removeFromPlaylist(id, realIndex)
+                    a.vm.store.removeFromPlaylist(id, reorder.items[i].value.position)
                 })
             },
         )
-        item { Spacer(Modifier.height(8.dp)) }
+        if (songs.size > 1) item {
+            Txt(
+                "Tahan lalu geser lagu untuk mengubah urutan.", IosType.footnote,
+                Modifier.padding(horizontal = 16.dp, vertical = 12.dp), color = c.secondaryLabel,
+            )
+        }
     }
 }

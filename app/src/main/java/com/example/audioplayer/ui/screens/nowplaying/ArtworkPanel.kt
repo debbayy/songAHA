@@ -2,7 +2,6 @@ package com.example.audioplayer.ui.screens.nowplaying
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,7 +35,11 @@ internal fun ArtworkPanel(p: PlayerState, vm: PlayerViewModel, song: Song) {
     val a = LocalActions.current
     val favs by vm.store.favorites.collectAsState()
     Column {
-        Box(Modifier.weight(1f).fillMaxWidth(), Alignment.Center) {
+        SwipeableArtwork(
+            onSwipeRight = { vm.next() },
+            onSwipeLeft = { vm.previousSong() },
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
             // Cover mengecil saat pause, khas Apple Music
             val scale by animateFloatAsState(if (p.isPlaying) 1f else 0.82f, spring(dampingRatio = 0.62f, stiffness = 260f), label = "art")
             Artwork(

@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 
-/** Slider tanpa knob yang menebal saat disentuh (scrubber & volume di Now Playing iOS). */
+/** Slider tanpa knob yang menebal saat disentuh (scrubber Now Playing iOS). */
 @Composable
 fun IosSlider(
     value: Float,

@@ -51,6 +51,7 @@ fun Page(
     actions: @Composable RowScope.() -> Unit = {},
     header: (@Composable () -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
+    listModifier: Modifier = Modifier,
     content: LazyListScope.() -> Unit,
 ) {
     val c = LocalIos.current
@@ -66,7 +67,7 @@ fun Page(
     // backdrop: dengan wallpaper, tiap halaman menggambar wallpaper sendiri supaya halaman
     // yang sedang bergeser saat navigasi tetap menutupi halaman di belakangnya
     Box(modifier.fillMaxSize().backdrop(frosted = false).background(background)) {
-        LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = 190.dp)) {
+        LazyColumn(listModifier.fillMaxSize(), state = state, contentPadding = PaddingValues(bottom = 190.dp)) {
             item(key = "__header") {
                 if (header != null) header()
                 else Txt(

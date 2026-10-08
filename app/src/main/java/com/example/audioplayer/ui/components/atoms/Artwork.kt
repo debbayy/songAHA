@@ -36,12 +36,14 @@ fun Artwork(
     val c = LocalIos.current
     val context = LocalContext.current
     val px = with(LocalDensity.current) { sizeHint.roundToPx() }
+    // produceState tidak mereset nilainya saat key berubah, jadi selalu isi ulang: kalau tidak,
+    // cover lagu sebelumnya tertinggal ketika komponen ini dipakai untuk lagu lain
     val bitmap by produceState<Bitmap?>(
         initialValue = song?.let { ArtworkLoader.cached(it, px) },
         key1 = song?.artKey,
         key2 = px,
     ) {
-        if (value == null && song != null) value = ArtworkLoader.load(context, song, px)
+        value = song?.let { ArtworkLoader.cached(it, px) ?: ArtworkLoader.load(context, it, px) }
     }
     Box(
         modifier

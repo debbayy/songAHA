@@ -90,6 +90,14 @@ class LibraryStore(context: Context) {
     fun addToPlaylist(id: String, songIds: List<String>) =
         savePlaylists(_playlists.value.map { if (it.id == id) it.copy(songIds = it.songIds + songIds) else it })
 
+    /** Pindahkan lagu di posisi [from] ke posisi [to] (indeks di daftar songIds). */
+    fun movePlaylistSong(id: String, from: Int, to: Int) =
+        savePlaylists(_playlists.value.map {
+            if (it.id == id && from in it.songIds.indices && to in it.songIds.indices) {
+                it.copy(songIds = it.songIds.toMutableList().apply { add(to, removeAt(from)) })
+            } else it
+        })
+
     fun removeFromPlaylist(id: String, index: Int) =
         savePlaylists(_playlists.value.map {
             if (it.id == id && index in it.songIds.indices) it.copy(songIds = it.songIds.filterIndexed { i, _ -> i != index })

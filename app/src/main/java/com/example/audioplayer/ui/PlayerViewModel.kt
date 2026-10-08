@@ -1,14 +1,10 @@
 package com.example.audioplayer.ui
 
 import android.app.Application
-import android.content.BroadcastReceiver
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.database.ContentObserver
-import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -45,8 +41,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 data class QueueEntry(val index: Int, val song: Song)
 
@@ -96,20 +90,6 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     private val _sleep = MutableStateFlow<SleepTimer?>(null)
     val sleep: StateFlow<SleepTimer?> = _sleep.asStateFlow()
 
-    // ---- Volume ----
-    private val audio = app.getSystemService(AudioManager::class.java)
-    private val maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
-    private val _volume = MutableStateFlow(currentVolume())
-    val volume: StateFlow<Float> = _volume.asStateFlow()
-
-    private val volumeReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val v = currentVolume()
-            // abaikan pembulatan saat user sedang menggeser slider
-            if (abs(v - _volume.value) >= 1f / maxVolume) _volume.value = v
-        }
-    }
-
     // ---- Pantau perubahan file musik di HP ----
     private var reloadJob: Job? = null
     private val mediaObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -144,10 +124,6 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
         }, ContextCompat.getMainExecutor(app))
 
-        ContextCompat.registerReceiver(
-            app, volumeReceiver, IntentFilter("android.media.VOLUME_CHANGED_ACTION"),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
         app.contentResolver.registerContentObserver(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, mediaObserver
         )
@@ -278,6 +254,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     /** Seperti iOS: mundur ke awal lagu dulu kalau sudah lewat 3 detik. */
     fun previous() { controller?.seekToPrevious() }
 
+    /** Langsung ke lagu sebelumnya (tanpa aturan "mundur ke awal lagu" seperti tombol ⏮). */
+    fun previousSong() { controller?.seekToPreviousMediaItem() }
+
     fun seekTo(positionMs: Long) {
         controller?.seekTo(positionMs)
         _position.value = positionMs
@@ -286,6 +265,9 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     fun playQueueIndex(index: Int) {
         controller?.run { seekTo(index, 0L); play() }
     }
+
+    /** Pindahkan lagu di antrean dari indeks [from] ke [to] (indeks media di pemutar). */
+    fun moveQueueItem(from: Int, to: Int) { controller?.moveMediaItem(from, to) }
 
     fun removeFromQueue(index: Int) { controller?.removeMediaItem(index) }
 
@@ -300,13 +282,6 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
-
-    fun setVolume(fraction: Float) {
-        _volume.value = fraction
-        audio.setStreamVolume(AudioManager.STREAM_MUSIC, (fraction * maxVolume).roundToInt(), 0)
-    }
-
-    private fun currentVolume() = audio.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxVolume
 
     /** minutes > 0: menit, < 0: akhir lagu, 0: matikan. */
     fun setSleepTimer(minutes: Int) {
@@ -370,7 +345,6 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         val app = getApplication<Application>()
-        runCatching { app.unregisterReceiver(volumeReceiver) }
         app.contentResolver.unregisterContentObserver(mediaObserver)
         controller?.removeListener(listener)
         controller?.release()

@@ -117,7 +117,6 @@ fun NowPlayingScreen() {
 
             Scrubber(vm, p.durationMs)
             PlaybackControls(p, vm)
-            VolumeRow(vm)
             BottomRow()
         }
     }

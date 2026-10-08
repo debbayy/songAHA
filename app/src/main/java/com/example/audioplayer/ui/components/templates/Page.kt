@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -52,6 +53,8 @@ fun Page(
     header: (@Composable () -> Unit)? = null,
     state: LazyListState = rememberLazyListState(),
     listModifier: Modifier = Modifier,
+    /** Lapisan di atas daftar, mis. indeks abjad. */
+    overlay: @Composable BoxScope.() -> Unit = {},
     content: LazyListScope.() -> Unit,
 ) {
     val c = LocalIos.current
@@ -77,6 +80,7 @@ fun Page(
             }
             content()
         }
+        overlay()
 
         // Efek tepi atas (scroll edge) + judul kecil
         Box(

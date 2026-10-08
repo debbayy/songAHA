@@ -15,20 +15,18 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -45,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import com.example.audioplayer.data.ArtworkLoader
 import com.example.audioplayer.ui.LocalActions
 import com.example.audioplayer.ui.NowPlayingPanel
-import com.example.audioplayer.ui.components.foundation.noRippleClick
 import kotlinx.coroutines.launch
 
 @Composable
@@ -59,6 +56,7 @@ fun NowPlayingScreen() {
     val scope = rememberCoroutineScope()
     val dismissPx = with(LocalDensity.current) { 140.dp.toPx() }
     val offset = remember { Animatable(0f) }
+    var volumeOpen by remember { mutableStateOf(false) }
 
     // Latar: warna dominan cover + cover 8x8 yang di-stretch (blur murah, aman untuk Android 8)
     val tintRaw by produceState<Color?>(null, song.artKey) {
@@ -98,10 +96,7 @@ fun NowPlayingScreen() {
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 26.dp)
         ) {
-            // grabber
-            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).noRippleClick { nav.nowPlayingOpen = false }, Alignment.Center) {
-                Box(Modifier.size(38.dp, 5.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.45f)))
-            }
+            NowPlayingTopBar(volumeOpen) { volumeOpen = !volumeOpen }
 
             AnimatedContent(
                 nav.panel, Modifier.weight(1f),
@@ -119,5 +114,6 @@ fun NowPlayingScreen() {
             PlaybackControls(p, vm)
             BottomRow()
         }
+        VolumePanel(volumeOpen) { volumeOpen = false }
     }
 }

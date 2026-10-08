@@ -29,6 +29,7 @@ import com.example.audioplayer.data.WallpaperFile
 import com.example.audioplayer.data.lyrics.LyricsRepository
 import com.example.audioplayer.data.toMediaItem
 import com.example.audioplayer.player.PlaybackService
+import com.example.audioplayer.player.SystemVolume
 import com.example.audioplayer.player.equalizer.EqualizerStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,6 +63,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     val store = LibraryStore(app)
     val equalizer = EqualizerStore.get(app)
     val lyrics = LyricsRepository(app)
+    val volume = SystemVolume(app)
     private var controller: MediaController? = null
 
     private val _library = MutableStateFlow(Library.EMPTY)
@@ -346,6 +348,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         val app = getApplication<Application>()
         app.contentResolver.unregisterContentObserver(mediaObserver)
+        volume.release()
         controller?.removeListener(listener)
         controller?.release()
         controller = null

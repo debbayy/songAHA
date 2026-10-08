@@ -15,7 +15,7 @@ import com.example.audioplayer.ui.NowPlayingPanel
 import com.example.audioplayer.ui.Route
 import com.example.audioplayer.ui.components.atoms.Icons
 
-/** Baris paling bawah Now Playing: lirik, timer tidur, equalizer, antrean. */
+/** Baris paling bawah Now Playing: lirik, timer tidur, equalizer, antrean. (Volume ada di baris atas.) */
 @Composable
 internal fun BottomRow() {
     val a = LocalActions.current
